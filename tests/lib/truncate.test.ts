@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { renderReceivingEmailsTable } from '../../src/commands/emails/receiving/utils';
 import { truncate } from '../../src/lib/truncate';
 
 const LONE_SURROGATE =
@@ -29,26 +28,36 @@ describe('truncate', () => {
     const value = `${'a'.repeat(45)}😀${'b'.repeat(10)}`;
     expect(truncate(value, 50)).toBe(`${'a'.repeat(45)}😀...`);
   });
-});
 
-describe('renderReceivingEmailsTable', () => {
-  it('does not leave a lone surrogate when truncating an emoji subject', () => {
-    const subject = `${'a'.repeat(46)}😀${'b'.repeat(10)}`;
-    const table = renderReceivingEmailsTable([
-      {
-        id: 'rcv_1',
-        to: ['inbox@example.com'],
-        from: 'sender@example.com',
-        subject,
-        created_at: '2026-02-18 12:00:00+00',
-        message_id: '<m@example.com>',
-        bcc: null,
-        cc: null,
-        reply_to: null,
-        attachments: [],
-      },
-    ]);
-    expect(table).not.toMatch(LONE_SURROGATE);
-    expect(table).toContain(`${'a'.repeat(46)}...`);
+  it('hard-cuts without an ellipsis when max is not larger than it', () => {
+    expect(truncate('abcdef', 2)).toBe('ab');
+    expect(truncate('abcdef', 3)).toBe('abc');
+    expect(truncate('abcdef', 0)).toBe('');
+    expect(truncate('abcdef', 4)).toBe('a...');
+  });
+
+  describe.each([
+    ['a family emoji', '👨‍👩‍👧'],
+    ['a flag', '🇺🇸'],
+    ['a skin-tone emoji', '👍🏽'],
+  ])('with %s at the cut point', (_name, emoji) => {
+    it.each([
+      // The emoji straddles the cut at max 50 (budget 47), at every offset
+      // from fully inside the budget to fully outside it.
+      ...Array.from(
+        { length: emoji.length + 1 },
+        (_, i) => 47 - emoji.length + i,
+      ),
+    ])('keeps it whole or drops it whole with %i leading characters', (lead) => {
+      const value = `${'a'.repeat(lead)}${emoji}${'b'.repeat(20)}`;
+      const out = truncate(value, 50);
+      expect(out).not.toMatch(LONE_SURROGATE);
+      expect(out.endsWith('...')).toBe(true);
+      const body = out.slice(0, -3);
+      const fits = lead + emoji.length <= 47;
+      expect(body).toBe(
+        fits ? `${'a'.repeat(lead)}${emoji}` : 'a'.repeat(lead),
+      );
+    });
   });
 });
