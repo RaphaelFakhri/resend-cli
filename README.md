@@ -697,6 +697,7 @@ Prints the CLI command tree as JSON for scripting and AI agents. In an interacti
 
 - **`resend emails send ... --dry-run`** — validates inputs and prints `{ "dryRun": true, "request": { ... } }` without sending. Attachments appear as `filename` and `byteLength` only.
 - **`resend broadcasts create ... --dry-run`** — same for the broadcast create payload.
+- **`resend emails batch --file ./emails.json --dry-run`** — parses and normalises the JSON array, resolves any `--react-email` template, then prints the request payload without sending. No API key required.
 
 Other commands do not support `--dry-run`.
 
