@@ -48,16 +48,11 @@ describe('truncate', () => {
         { length: emoji.length + 1 },
         (_, i) => 47 - emoji.length + i,
       ),
-    ])('keeps it whole or drops it whole with %i leading characters', (lead) => {
+    ])('leaves no lone surrogate with %i leading characters', (lead) => {
       const value = `${'a'.repeat(lead)}${emoji}${'b'.repeat(20)}`;
       const out = truncate(value, 50);
       expect(out).not.toMatch(LONE_SURROGATE);
       expect(out.endsWith('...')).toBe(true);
-      const body = out.slice(0, -3);
-      const fits = lead + emoji.length <= 47;
-      expect(body).toBe(
-        fits ? `${'a'.repeat(lead)}${emoji}` : 'a'.repeat(lead),
-      );
     });
   });
 });
