@@ -49,7 +49,25 @@ describe('automations runs list command', () => {
     });
   });
 
-  it('preserves --status in the next-page hint', async () => {
+  it('strips spaces from a comma-separated --status', async () => {
+    setupOutputSpies();
+
+    await listAutomationRunsCommand.parseAsync(
+      ['auto-1', '--status', 'running, failed'],
+      { from: 'user' },
+    );
+
+    expect(mockList).toHaveBeenCalledWith({
+      automationId: 'auto-1',
+      limit: 10,
+      status: 'running,failed',
+    });
+  });
+
+  it.each([
+    ['failed', '--status failed'],
+    ['running, failed', '--status running,failed'],
+  ])('preserves --status %j in the next-page hint', async (status, expected) => {
     mockList.mockResolvedValueOnce({
       data: { object: 'list', has_more: true, data: [run] },
       error: null,
@@ -68,15 +86,14 @@ describe('automations runs list command', () => {
     delete process.env.TERM;
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await listAutomationRunsCommand.parseAsync(
-      ['auto-1', '--status', 'failed'],
-      { from: 'user' },
-    );
+    await listAutomationRunsCommand.parseAsync(['auto-1', '--status', status], {
+      from: 'user',
+    });
 
     const output = logSpy.mock.calls.map((c) => c[0]).join('\n');
     logSpy.mockRestore();
     expect(output).toContain(
-      'automations runs list auto-1 --after run-1 --limit 10 --status failed',
+      `automations runs list auto-1 --after run-1 --limit 10 ${expected}`,
     );
   });
 });
